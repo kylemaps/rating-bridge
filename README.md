@@ -15,7 +15,8 @@ Rating Bridge turns a robotics MCAP log into a **signed, re-runnable Exposure & 
 ## Quickstart (Windows)
 
 ```bat
-cd C:\Users\Kyle\Desktop\ventures\rating-bridge
+git clone https://github.com/kylemaps/rating-bridge.git
+cd rating-bridge
 python -m venv .venv
 .venv\Scripts\python.exe -m pip install -e .
 
