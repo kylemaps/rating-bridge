@@ -1,0 +1,7 @@
+{
+  "public_key": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEArm/Ah5O8Z6k3C8TU0D9G8BT1TaWjPYWuW+VOQXLYZWg=\n-----END PUBLIC KEY-----\n",
+  "report_sha256": "11efd5ed9d6d7365862baecaa41f14f6f83c2cf4f80affe6f3cf7e2f3c0c64c9",
+  "signature": "2e2d1c015dd65047a20388a3a11d4c066031f13231347408db3a50eb0321803106e14f6eded6fdd6d2639655592276343e020af5da4e894b7850677b91331b0d",
+  "signed_at": "2026-07-05T05:17:04Z",
+  "tool_version": "0.1.0"
+}

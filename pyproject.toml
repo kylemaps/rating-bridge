@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rating-bridge"
+version = "0.1.0"
+description = "MCAP -> signed, re-runnable underwriting-grade Exposure & Incident Report."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Kyle Mapue", email = "kyle@mapuekyle.com" }]
+requires-python = ">=3.11"
+dependencies = [
+    "mcap>=1.1.1",
+    "mcap-ros1-support>=0.7.0",
+    "cryptography>=42.0.0",
+]
+
+[project.scripts]
+rating-bridge = "rating_bridge.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/kylemaps/rating-bridge"
+Repository = "https://github.com/kylemaps/rating-bridge"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rating_bridge"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.4.0",
+]
+
+[tool.ruff]
+src = ["src"]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

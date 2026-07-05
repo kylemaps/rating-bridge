@@ -1,0 +1,41 @@
+<svg width="100%" viewBox="0 0 1500 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pipeline: robot telemetry sealed by veriseal, converted by Rating Bridge into a signed exposure report, incidents recorded into Agent Loss Record, consumed by an underwriter for dynamic pricing.">
+  <style>
+    .box { fill: #ECECFF; stroke: #9370DB; stroke-width: 1.5; }
+    .lbl { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 15px; fill: #222; text-anchor: middle; }
+    .lbl .muted { fill: #555; font-size: 12.5px; }
+    .arrow { stroke: #333; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
+  </style>
+  <defs>
+    <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333"/>
+    </marker>
+  </defs>
+
+  <!-- Box 1: telemetry -->
+  <rect class="box" x="20" y="65" width="260" height="90" rx="8"/>
+  <text class="lbl" x="150" y="102"><tspan x="150" dy="0">Robot / agent</tspan><tspan x="150" dy="20">telemetry (MCAP)</tspan></text>
+
+  <line class="arrow" x1="280" y1="110" x2="316" y2="110"/>
+
+  <!-- Box 2: veriseal -->
+  <rect class="box" x="320" y="55" width="260" height="110" rx="8"/>
+  <text class="lbl" x="450" y="97"><tspan x="450" dy="0" font-weight="600">veriseal</tspan><tspan x="450" dy="20" class="muted">seal: Merkle + Ed25519</tspan><tspan x="450" dy="16" class="muted">+ OpenTimestamps</tspan></text>
+
+  <line class="arrow" x1="580" y1="110" x2="616" y2="110"/>
+
+  <!-- Box 3: Rating Bridge -->
+  <rect class="box" x="620" y="55" width="260" height="110" rx="8"/>
+  <text class="lbl" x="750" y="97"><tspan x="750" dy="0" font-weight="600">Rating Bridge</tspan><tspan x="750" dy="20" class="muted">signed Exposure &amp;</tspan><tspan x="750" dy="16" class="muted">Incident Report</tspan></text>
+
+  <line class="arrow" x1="880" y1="110" x2="916" y2="110"/>
+
+  <!-- Box 4: ALR -->
+  <rect class="box" x="920" y="55" width="260" height="110" rx="8"/>
+  <text class="lbl" x="1050" y="97"><tspan x="1050" dy="0" font-weight="600">Agent Loss Record</tspan><tspan x="1050" dy="20" class="muted">open standard —</tspan><tspan x="1050" dy="16" class="muted">priceable loss corpus</tspan></text>
+
+  <line class="arrow" x1="1180" y1="110" x2="1216" y2="110"/>
+
+  <!-- Box 5: Underwriter -->
+  <rect class="box" x="1220" y="65" width="260" height="90" rx="8"/>
+  <text class="lbl" x="1350" y="102"><tspan x="1350" dy="0">Underwriter:</tspan><tspan x="1350" dy="20">trusted telemetry → price</tspan></text>
+</svg>

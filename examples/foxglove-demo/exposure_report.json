@@ -1,0 +1,120 @@
+{
+  "autonomy": {
+    "autonomous_time_s": "not_present_in_source",
+    "disengagement_count": "not_present_in_source",
+    "intervention_count": "not_present_in_source",
+    "manual_time_s": "not_present_in_source",
+    "matched_topics": [],
+    "reason": "No topic name matched an autonomy-engagement pattern (mode, engage, estop, e_stop, e-stop, autonomy, manual, disengag, override, safety_driver).",
+    "status": "not_present_in_source",
+    "topics_scanned": [
+      "/diagnostics",
+      "/image_color/compressed",
+      "/radar/points",
+      "/radar/range",
+      "/radar/tracks",
+      "/tf",
+      "/velodyne_points"
+    ]
+  },
+  "continuity": {
+    "gap_count": 0,
+    "gap_threshold_s": 1.0,
+    "gaps": [],
+    "longest_gap_s": 0.0,
+    "max_observed_interval_s": 0.022056
+  },
+  "generated_utc": "2026-07-05T05:17:04Z",
+  "incidents": [],
+  "motion": {
+    "distance_m": "not_present_in_source",
+    "hard_decel_event_count": "not_present_in_source",
+    "hard_decel_threshold_mps2": 3.0,
+    "max_speed_mps": "not_present_in_source",
+    "mean_speed_mps": "not_present_in_source",
+    "reason": "No nav_msgs/Odometry, geometry_msgs/Pose*Stamped, sensor_msgs/NavSatFix, or moving /tf transform found in this file.",
+    "status": "not_present_in_source",
+    "topics_considered": [
+      "/diagnostics",
+      "/image_color/compressed",
+      "/radar/points",
+      "/radar/range",
+      "/radar/tracks",
+      "/tf",
+      "/velodyne_points"
+    ]
+  },
+  "notes": {
+    "does_not_prove": "Veracity at capture. Nothing here proves the source log is a truthful record of physical reality, that sensors were calibrated, or that no out-of-band editing occurred before this file reached this tool. Pair with a veriseal seal made at/near capture time for that guarantee. Incident entries are DRAFT, threshold-triggered stubs — not adjudicated losses.",
+    "proves": "Integrity and derivation: this report was computed deterministically from the exact source file bytes hashed in provenance.source_sha256, using the documented rules and thresholds above. Re-running the command in provenance.command_to_reproduce against the same file byte-for-byte reproduces this report exactly."
+  },
+  "provenance": {
+    "command_to_reproduce": "python -m rating_bridge analyze data/demo.mcap --sign",
+    "gap_threshold_s": 1.0,
+    "hard_decel_threshold_mps2": 3.0,
+    "source_derivation": "mcap convert demo.bag demo.mcap (mcap-cli v0.2.0)",
+    "source_filename": "demo.mcap",
+    "source_sha256": "9a72d4151b7d042ae3fa1a4975faa02eac021c2fa937b59a158946083f3a6303",
+    "source_size_bytes": 60235418,
+    "source_url": "https://assets.foxglove.dev/demo.bag"
+  },
+  "schema_version": "rating-bridge-exposure-report-v1",
+  "session": {
+    "duration_s": 7.780759,
+    "end_utc": "2017-03-22T02:26:27.884602Z",
+    "message_count": 1606,
+    "start_utc": "2017-03-22T02:26:20.103843Z",
+    "topics": [
+      {
+        "bytes": 33872,
+        "count": 52,
+        "mean_rate_hz": 6.6832,
+        "schema": "diagnostic_msgs/DiagnosticArray",
+        "topic": "/diagnostics"
+      },
+      {
+        "bytes": 24733835,
+        "count": 234,
+        "mean_rate_hz": 30.0742,
+        "schema": "sensor_msgs/CompressedImage",
+        "topic": "/image_color/compressed"
+      },
+      {
+        "bytes": 47844,
+        "count": 156,
+        "mean_rate_hz": 20.0495,
+        "schema": "sensor_msgs/PointCloud2",
+        "topic": "/radar/points"
+      },
+      {
+        "bytes": 5928,
+        "count": 156,
+        "mean_rate_hz": 20.0495,
+        "schema": "sensor_msgs/Range",
+        "topic": "/radar/range"
+      },
+      {
+        "bytes": 119150,
+        "count": 156,
+        "mean_rate_hz": 20.0495,
+        "schema": "radar_driver/RadarTracks",
+        "topic": "/radar/tracks"
+      },
+      {
+        "bytes": 72756,
+        "count": 774,
+        "mean_rate_hz": 99.4762,
+        "schema": "tf2_msgs/TFMessage",
+        "topic": "/tf"
+      },
+      {
+        "bytes": 99804906,
+        "count": 78,
+        "mean_rate_hz": 10.0247,
+        "schema": "sensor_msgs/PointCloud2",
+        "topic": "/velodyne_points"
+      }
+    ]
+  },
+  "tool_version": "0.1.0"
+}
