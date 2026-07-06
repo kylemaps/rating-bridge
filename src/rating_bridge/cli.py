@@ -1,4 +1,4 @@
-"""Rating Bridge CLI — analyze / sign / verify.
+"""Rating Bridge CLI: analyze / sign / verify.
 
     python -m rating_bridge analyze data\\demo.mcap [--sign] [--out-dir report]
     python -m rating_bridge sign [--report-dir report] [--key keys\\rating_bridge_signing_key.pem]
@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -28,6 +29,23 @@ from rating_bridge.signing import verify as ed25519_verify
 
 DEFAULT_KEY_PATH = Path("keys") / "rating_bridge_signing_key.pem"
 
+_ANSI = {"green": "\033[32m", "red": "\033[31m", "yellow": "\033[33m", "cyan": "\033[36m", "dim": "\033[2m"}
+_RESET = "\033[0m"
+
+
+def _color_enabled() -> bool:
+    if os.environ.get("NO_COLOR") is not None or os.environ.get("TERM") == "dumb":
+        return False
+    return sys.stdout.isatty()
+
+
+def _c(text: str, code: str) -> str:
+    return f"{_ANSI[code]}{text}{_RESET}" if _color_enabled() else text
+
+
+def _truncate(hex_id: str) -> str:
+    return f"{hex_id[:16]}..."
+
 
 def _print_header(title: str) -> None:
     bar = "-" * len(title)
@@ -37,7 +55,7 @@ def _print_header(title: str) -> None:
 def _do_analyze(args: argparse.Namespace) -> int:
     source_path = Path(args.mcap_file)
     if not source_path.exists():
-        print(f"ERROR: source file not found: {source_path}", file=sys.stderr)
+        print(_c(f"ERROR: source file not found: {source_path}", "red"), file=sys.stderr)
         return 2
 
     out_dir = Path(args.out_dir)
@@ -67,16 +85,19 @@ def _do_analyze(args: argparse.Namespace) -> int:
     )
     report_md_path.write_text(render_markdown(report), encoding="utf-8", newline="\n")
 
+    source_size = f"{report['provenance']['source_size_bytes']:,}"
+
     _print_header("Analyze complete")
-    print(f"Source:        {source_path}  ({report['provenance']['source_size_bytes']:,} bytes)")
-    print(f"Messages:      {report['session']['message_count']}  "
-          f"across {len(report['session']['topics'])} topics")
-    print(f"Duration:      {report['session']['duration_s']} s")
-    print(f"Continuity:    {report['continuity']['gap_count']} gap(s) "
+    print(f"Source:        {_c(str(source_path), 'cyan')}  "
+          f"({_c(source_size, 'cyan')} bytes)")
+    print(f"Messages:      {_c(str(report['session']['message_count']), 'cyan')}  "
+          f"across {_c(str(len(report['session']['topics'])), 'cyan')} topics")
+    print(f"Duration:      {_c(str(report['session']['duration_s']), 'cyan')} s")
+    print(f"Continuity:    {_c(str(report['continuity']['gap_count']), 'cyan')} gap(s) "
           f"> {report['continuity']['gap_threshold_s']}s")
-    print(f"Motion:        {report['motion']['status']}")
-    print(f"Autonomy:      {report['autonomy']['status']}")
-    print(f"Incidents:     {len(report['incidents'])} draft stub(s)")
+    print(f"Motion:        {_c(report['motion']['status'], 'cyan')}")
+    print(f"Autonomy:      {_c(report['autonomy']['status'], 'cyan')}")
+    print(f"Incidents:     {_c(str(len(report['incidents'])), 'cyan')} draft stub(s)")
     print(f"JSON report:   {report_json_path}")
     print(f"Markdown:      {report_md_path}")
 
@@ -90,7 +111,7 @@ def _sign(out_dir: Path, key_path: Path) -> int:
     sig_path = out_dir / "exposure_report.sig.json"
 
     if not report_json_path.exists():
-        print(f"ERROR: {report_json_path} not found — run `analyze` first.", file=sys.stderr)
+        print(_c(f"ERROR: {report_json_path} not found. Run `analyze` first.", "red"), file=sys.stderr)
         return 2
 
     if key_path.exists():
@@ -99,11 +120,12 @@ def _sign(out_dir: Path, key_path: Path) -> int:
         key = generate_key()
         key_path.parent.mkdir(parents=True, exist_ok=True)
         save_private_pem(key, key_path)
-        print(
+        print(_c(
             f"WARNING: generated new signing key -> {key_path}\n"
             "         This is a local demo key, not an HSM-backed production key. "
-            "Keep it safe and secret."
-        )
+            "Keep it safe and secret.",
+            "yellow",
+        ))
 
     report_obj = json.loads(report_json_path.read_bytes())
     canon = canonical_bytes(report_obj)
@@ -124,7 +146,7 @@ def _sign(out_dir: Path, key_path: Path) -> int:
     )
 
     _print_header("Sign complete")
-    print(f"Report SHA-256: {report_sha256}")
+    print(f"Report SHA-256: {_c(_truncate(report_sha256), 'cyan')}")
     print(f"Signature:      {sig_path}")
     print(f"Signing key:    {key_path}")
     return 0
@@ -141,7 +163,7 @@ def _do_verify(args: argparse.Namespace) -> int:
 
     if not report_json_path.exists() or not sig_path.exists():
         print(
-            f"ERROR: expected both {report_json_path} and {sig_path} to exist.",
+            _c(f"ERROR: expected both {report_json_path} and {sig_path} to exist.", "red"),
             file=sys.stderr,
         )
         return 2
@@ -149,14 +171,14 @@ def _do_verify(args: argparse.Namespace) -> int:
     try:
         report_obj = json.loads(report_json_path.read_bytes())
     except json.JSONDecodeError as exc:
-        print("TAMPERED")
-        print(f"  exposure_report.json is not valid JSON — {exc}")
+        print(_c("TAMPERED: exposure_report.json is not valid JSON", "red"))
+        print(f"  {exc}")
         return 1
 
     try:
         sig_doc = json.loads(sig_path.read_bytes())
     except json.JSONDecodeError as exc:
-        print(f"ERROR: exposure_report.sig.json is not valid JSON — {exc}", file=sys.stderr)
+        print(_c(f"ERROR: exposure_report.sig.json is not valid JSON: {exc}", "red"), file=sys.stderr)
         return 2
 
     recomputed_sha256 = hashlib.sha256(canonical_bytes(report_obj)).hexdigest()
@@ -174,17 +196,16 @@ def _do_verify(args: argparse.Namespace) -> int:
             sig_ok = False
 
     if hash_ok and sig_ok:
-        print(f"INTACT — signature valid, report SHA-256 {recomputed_sha256[:16]}...")
+        print(_c(f"INTACT: signature valid, report SHA-256 {_truncate(recomputed_sha256)}", "green"))
         return 0
 
-    print("TAMPERED")
     if not hash_ok:
-        print("  Hash mismatch:")
-        print(f"    expected  {sig_doc.get('report_sha256', '?')[:16]}...")
-        print(f"    recomputed {recomputed_sha256[:16]}...")
+        print(_c("TAMPERED: report hash does not match the signed hash", "red"))
+        print(f"  expected    {_truncate(sig_doc.get('report_sha256', '?'))}")
+        print(f"  recomputed  {_truncate(recomputed_sha256)}")
     else:
-        print("  Signature INVALID for the recomputed hash — report content changed "
-              "after signing, or signature/key do not match.")
+        print(_c("TAMPERED: signature invalid for the recomputed hash", "red"))
+        print("  report content changed after signing, or signature/key do not match")
     return 1
 
 
