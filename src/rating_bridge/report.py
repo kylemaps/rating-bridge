@@ -29,7 +29,7 @@ def build_report(
     session, continuity = session_and_continuity_metrics(source_path)
     motion, hard_decel_events = motion_metrics(source_path)
     topics = [t["topic"] for t in session["topics"]]
-    autonomy = autonomy_metrics(topics)
+    autonomy = autonomy_metrics(source_path, topics)
     incidents = build_incidents(source_path.name, sha256_hex, continuity["gaps"], hard_decel_events)
 
     report = {
@@ -109,7 +109,8 @@ def render_markdown(report: dict) -> str:
     if a["status"] == "computed":
         ap(f"- **Autonomous time:** {a['autonomous_time_s']}s / "
            f"**Manual time:** {a['manual_time_s']}s / "
-           f"**Interventions:** {a['intervention_count']}")
+           f"**Interventions:** {a['intervention_count']} / "
+           f"**E-stops:** {a.get('estop_event_count', 0)}")
     else:
         ap("- **Autonomy engagement:** *not present in source* — " + a["reason"])
     ap(f"- **Draft incidents flagged:** {len(incidents)}")
@@ -174,10 +175,14 @@ def render_markdown(report: dict) -> str:
     ap("## Autonomy")
     ap("")
     if a["status"] == "computed":
+        ap(f"- Source signal: `{a['source_topic']}` (decoder: {a['decoder']})")
+        ap(f"- Samples decoded: {a['sample_count']}")
         ap(f"- Autonomous time: {a['autonomous_time_s']} s")
         ap(f"- Manual time: {a['manual_time_s']} s")
-        ap(f"- Interventions: {a['intervention_count']}")
-        ap(f"- Disengagements: {a['disengagement_count']}")
+        ap(f"- Unknown-state time: {a.get('unknown_state_time_s', 0)} s")
+        ap(f"- Interventions (auto -> manual): {a['intervention_count']}")
+        ap(f"- Disengagements (auto -> manual/estop): {a['disengagement_count']}")
+        ap(f"- E-stop events: {a.get('estop_event_count', 0)}")
     else:
         ap("- Status: **not_present_in_source**")
         ap(f"- Reason: {a['reason']}")
