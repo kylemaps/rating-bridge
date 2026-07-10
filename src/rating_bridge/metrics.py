@@ -327,7 +327,6 @@ def autonomy_metrics(path: Path, topics: list[str]) -> dict:
         interventions = 0  # autonomous -> manual transitions (human took over)
         disengagements = 0  # autonomous -> (manual or estop) transitions
         estop_events = 0
-        prev_estop = False
         for (t1, st1, es1), (t2, _st2, _es2) in zip(samples, samples[1:]):
             dt = (t2 - t1) / 1e9
             if dt < 0:
