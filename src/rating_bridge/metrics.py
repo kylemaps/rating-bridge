@@ -176,22 +176,53 @@ def motion_metrics(path: Path) -> tuple[dict, list[dict]]:
     mean_speed = total_distance / duration_s if duration_s > 0 else 0.0
     max_speed = max((s for _, s in speeds), default=0.0)
 
+    # Per-interval deceleration, then COALESCE contiguous over-threshold
+    # intervals into one maneuver. A single continuous brake sampled at 10 Hz
+    # produces many consecutive over-threshold intervals; reporting each as its
+    # own "event" would inflate the incident count by the sample rate. One
+    # physical braking maneuver must count as one event, with its peak
+    # deceleration and the speed it bled off across the whole maneuver.
     hard_decel_events = []
+    run: list[tuple[int, int, float, float, float]] = []  # (t1, t2, v1, v2, accel)
+
+    def _flush_run() -> None:
+        if not run:
+            return
+        t_start = run[0][0]
+        t_end = run[-1][1]
+        v_before = run[0][2]
+        v_after = run[-1][3]
+        peak_accel = min(r[4] for r in run)  # most negative = hardest brake
+        hard_decel_events.append(
+            {
+                "occurred_at_utc": _ns_to_iso(t_start),
+                "end_utc": _ns_to_iso(t_end),
+                "log_time_ns": t_start,
+                "duration_s": round((t_end - t_start) / 1e9, 3),
+                "peak_deceleration_mps2": round(peak_accel, 3),
+                "speed_before_mps": round(v_before, 3),
+                "speed_after_mps": round(v_after, 3),
+                "sample_interval_count": len(run),
+            }
+        )
+        run.clear()
+
+    prev_t2 = None
     for (t1, v1), (t2, v2) in zip(speeds, speeds[1:]):
         dt_s = (t2 - t1) / 1e9
         if dt_s <= 0:
             continue
         accel = (v2 - v1) / dt_s
         if accel <= -HARD_DECEL_THRESHOLD_MPS2:
-            hard_decel_events.append(
-                {
-                    "occurred_at_utc": _ns_to_iso(t2),
-                    "log_time_ns": t2,
-                    "deceleration_mps2": round(accel, 3),
-                    "speed_before_mps": round(v1, 3),
-                    "speed_after_mps": round(v2, 3),
-                }
-            )
+            # A break in time-contiguity (a skipped/absent interval) ends the run.
+            if prev_t2 is not None and run and t1 != prev_t2:
+                _flush_run()
+            run.append((t1, t2, v1, v2, accel))
+            prev_t2 = t2
+        else:
+            _flush_run()
+            prev_t2 = None
+    _flush_run()
 
     motion = {
         "status": "computed",
@@ -208,10 +239,54 @@ def motion_metrics(path: Path) -> tuple[dict, list[dict]]:
     return motion, hard_decel_events
 
 
-def autonomy_metrics(topics: list[str]) -> dict:
-    matched = sorted(
-        t for t in topics if any(kw in t.lower() for kw in AUTONOMY_KEYWORDS)
+# JSON payload fields that carry an autonomy state. Values are interpreted
+# case-insensitively. Anything unrecognized leaves the sample's state "unknown"
+# and is reported rather than guessed.
+_AUTO_STRING_VALUES = ("autonomous", "auto", "engaged", "self_driving", "self-driving")
+_MANUAL_STRING_VALUES = ("manual", "disengaged", "teleop", "operator")
+
+
+def _classify_json_state(obj: dict) -> tuple[str | None, bool]:
+    """Map one decoded JSON payload to (state, estop).
+
+    state is "autonomous", "manual", or None (unrecognized). estop is True if
+    an emergency-stop flag is asserted in the payload.
+    """
+    estop = bool(
+        obj.get("estop") or obj.get("e_stop") or obj.get("emergency_stop")
     )
+    state: str | None = None
+    for key in ("mode", "state", "status", "engagement"):
+        val = obj.get(key)
+        if isinstance(val, str):
+            low = val.strip().lower()
+            if any(low == v or low.startswith(v) for v in _AUTO_STRING_VALUES):
+                state = "autonomous"
+            elif any(low == v or low.startswith(v) for v in _MANUAL_STRING_VALUES):
+                state = "manual"
+            break
+    if state is None:
+        for key in ("autonomous", "engaged", "auto"):
+            if isinstance(obj.get(key), bool):
+                state = "autonomous" if obj[key] else "manual"
+                break
+    return state, estop
+
+
+def _iter_topic_payloads(path: Path, topic: str):
+    """Yield (log_time_ns, payload_bytes) for one topic, undecoded."""
+    from mcap.reader import make_reader
+
+    with open(path, "rb") as f:
+        reader = make_reader(f)
+        for _schema, channel, message in reader.iter_messages(topics=[topic]):
+            yield message.log_time, message.data
+
+
+def autonomy_metrics(path: Path, topics: list[str]) -> dict:
+    import json as _json
+
+    matched = sorted(t for t in topics if any(kw in t.lower() for kw in AUTONOMY_KEYWORDS))
     if not matched:
         return {
             "status": NOT_PRESENT,
@@ -226,15 +301,77 @@ def autonomy_metrics(topics: list[str]) -> dict:
             "intervention_count": NOT_PRESENT,
             "disengagement_count": NOT_PRESENT,
         }
-    # A matching topic name was found, but this version does not carry a
-    # schema-specific decoder for arbitrary autonomy-mode message types.
-    # Report the match honestly rather than guess at a decode.
+
+    # Decode the first matched topic whose payloads parse as JSON with a
+    # recognizable state field. Time in each state is integrated between
+    # consecutive samples (each sample's state holds until the next).
+    for topic in matched:
+        samples: list[tuple[int, str, bool]] = []
+        undecodable = False
+        for t_ns, payload in _iter_topic_payloads(path, topic):
+            try:
+                obj = _json.loads(payload)
+            except (ValueError, TypeError):
+                undecodable = True
+                break
+            if not isinstance(obj, dict):
+                undecodable = True
+                break
+            state, estop = _classify_json_state(obj)
+            samples.append((t_ns, state or "unknown", estop))
+        if undecodable or len(samples) < 2 or all(s[1] == "unknown" for s in samples):
+            continue
+
+        samples.sort(key=lambda s: s[0])
+        auto_s = manual_s = unknown_s = 0.0
+        interventions = 0  # autonomous -> manual transitions (human took over)
+        disengagements = 0  # autonomous -> (manual or estop) transitions
+        estop_events = 0
+        for (t1, st1, es1), (t2, _st2, _es2) in zip(samples, samples[1:]):
+            dt = (t2 - t1) / 1e9
+            if dt < 0:
+                continue
+            if st1 == "autonomous":
+                auto_s += dt
+            elif st1 == "manual":
+                manual_s += dt
+            else:
+                unknown_s += dt
+        for (t1, st1, es1), (t2, st2, es2) in zip(samples, samples[1:]):
+            if st1 == "autonomous" and st2 == "manual":
+                interventions += 1
+            if st1 == "autonomous" and (st2 == "manual" or es2):
+                disengagements += 1
+            if es2 and not es1:
+                estop_events += 1
+        # trailing-sample estop rising edge relative to prior
+        if samples and samples[0][2]:
+            estop_events += 1
+
+        return {
+            "status": "computed",
+            "source_topic": topic,
+            "decoder": "json-state-v1",
+            "sample_count": len(samples),
+            "autonomous_time_s": round(auto_s, 3),
+            "manual_time_s": round(manual_s, 3),
+            "unknown_state_time_s": round(unknown_s, 3),
+            "intervention_count": interventions,
+            "disengagement_count": disengagements,
+            "estop_event_count": estop_events,
+            "topics_scanned": topics,
+            "matched_topics": matched,
+        }
+
+    # A matching topic name was found, but no matched topic carried a JSON
+    # payload this version can decode. Report the match honestly.
     return {
         "status": NOT_PRESENT,
         "reason": (
-            "Topic name(s) suggest an autonomy-mode/e-stop signal, but rating-bridge v0.1 "
-            "has no schema-specific decoder for it yet — flagged for manual review rather "
-            "than guessed at."
+            "Topic name(s) suggest an autonomy-mode/e-stop signal, but no matched topic "
+            "carried a JSON payload with a recognizable state field (rating-bridge decodes "
+            "JSON mode/estop payloads; proprietary binary autonomy messages are flagged for "
+            "manual review rather than guessed at)."
         ),
         "topics_scanned": topics,
         "matched_topics": matched,

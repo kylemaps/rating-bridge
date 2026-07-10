@@ -101,13 +101,16 @@ def build_incidents(
                 "atlas_technique": None,
                 "failure_mode": "hard_deceleration",
                 "trigger": (
-                    f"deceleration {ev['deceleration_mps2']} m/s^2 "
-                    f"(speed {ev['speed_before_mps']} -> {ev['speed_after_mps']} m/s)"
+                    f"peak deceleration {ev['peak_deceleration_mps2']} m/s^2 over "
+                    f"{ev['duration_s']}s (speed {ev['speed_before_mps']} -> "
+                    f"{ev['speed_after_mps']} m/s, {ev['sample_interval_count']} intervals)"
                 ),
                 "trace_ref": {
                     "source_file": source_filename,
                     "source_sha256": source_sha256,
                     "log_time_ns": ev["log_time_ns"],
+                    "window_start_utc": ev["occurred_at_utc"],
+                    "window_end_utc": ev["end_utc"],
                 },
                 "control_state_at_failure": ["c.rollback:unknown — not observable from log alone"],
                 "detection_method": "automated: rating-bridge motion analysis",
