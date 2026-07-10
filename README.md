@@ -2,7 +2,7 @@
 
 For underwriters and brokers who need to price autonomous-systems risk from telemetry they can actually trust.
 
-Rating Bridge turns a robotics MCAP log into a **signed, re-runnable Exposure & Incident Report** that an insurance underwriter can rate against. It is the middle of a three-part pipeline: [veriseal](https://github.com/kylemaps/veriseal) seals the raw telemetry cryptographically at/near capture; Rating Bridge derives deterministic exposure metrics (session, continuity, motion, autonomy) and threshold-triggered draft incident stubs shaped to the **[Agent Loss Record](https://github.com/kylemaps/agent-loss-record) (ALR) v0.1** schema; the ALR corpus is where those records become comparable, priceable data points. Every number in the report traces back to the exact source-file bytes (SHA-256 in the provenance block), every threshold is documented in the report itself, and re-running the printed command on the same file reproduces the report byte-for-byte.
+Rating Bridge turns a robotics MCAP log into a **signed, re-runnable Exposure & Incident Report** that an insurance underwriter can rate against. It is the middle of a three-part pipeline: [veriseal](https://github.com/kylemaps/veriseal) seals the raw telemetry cryptographically at/near capture; Rating Bridge derives deterministic exposure metrics (session, continuity, motion, autonomy) and threshold-triggered draft incident stubs shaped to the **[Agent Loss Record](https://github.com/kylemaps/agent-loss-record) (ALR) v0.1** schema; the ALR corpus is where those records become comparable, priceable data points. Every number in the report traces back to the exact source-file bytes (SHA-256 in the provenance block), and every threshold is documented in the report itself.
 
 > Status: early v0.1, solo project. Analyze/sign/verify work end-to-end, but the report format will change. Adversarial feedback welcome: [open an issue](https://github.com/kylemaps/rating-bridge/issues).
 
@@ -141,7 +141,7 @@ raw robotics telemetry (.bag / .mcap)
 
 v0.1, solo-maintained. Built: analyze, sign, and verify, end-to-end, against a real public dataset, with a checked-in signed example. Not stable yet: the report schema itself, which will change as more datasets exercise the motion and autonomy paths.
 
-Rating Bridge is one of a family of standalone tools (veriseal, agent-loss-record, trace-bridge, coverholder-passport); each stands on its own.
+Rating Bridge is one of a family of standalone tools (veriseal, agent-loss-record, trace-bridge); each stands on its own.
 
 ---
 
